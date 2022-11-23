@@ -12,9 +12,9 @@ Use the following GCP CloudShell tutorial, and follow the instructions.
 
 To deploy manually, just make sure you are authorized in gcloud and then follow these steps.
 
-1. Change the project ID to your project in 1_env.sh and call ´source 1_env.sh´
-2. Run the second script to create the user and role assignments ´./2_create_resources.sh´
-3. Run the third script `./3_deploy.sh´ to deploy the microservice to Cloud Run
+1. Change the project ID to your project in 1_env.sh and call `source 1_env.sh`
+2. Run the second script to create the user and role assignments `./2_create_resources.sh`
+3. Run the third script `./3_deploy.sh` to deploy the microservice to Cloud Run
 
 ## Using and integrating
 
@@ -31,5 +31,6 @@ The solution is based on a Python microservice that uses the Google Cloud Python
 
 The microservice also uses [Google Cloud Logging](https://cloud.google.com/logging) to record all operations for future auditing and monitoring purposes.
 
-#
+## Support
+
 This is not an official Google product.
