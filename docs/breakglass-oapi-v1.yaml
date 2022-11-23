@@ -1,0 +1,64 @@
+openapi: 3.0.3
+info:
+  title: Break Glass API - v1.0.0
+  description: This API enables authorized external systems to grant emergency elevated priveleges (break glass) to a Google Cloud project for a specified user through an API call. The access is also automatically revoked after 10 hours using a Cloud Task.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  version: 1.0.0
+servers:
+  - url: CLOUD_RUN_PATH
+paths:
+  /breakglass:
+    post:
+      summary: Request break glass access for a specified Google Cloud user and project
+      description: Request break glass access for a specified Google Cloud user and project. An automatic call to revoke the access (delete) will be configured as a Cloud Task for 10 hours later (the client does not need to manually revoke, but can if wanted at an earlier time)
+      parameters:
+        - name: project
+          in: query
+          description: The Google Cloud project that emergency access is being requested for
+          required: true
+          schema:
+            type: string
+        - name: user
+          in: query
+          description: The user who should get emergency elevated access, in the format either user:username@example.com for users or serviceAccount:svcname@project.iam.gserviceaccount.com for service accounts
+          required: true
+          schema:
+            type: string
+        - name: justification
+          description: A justification for the elevation to be logged with the request metadata
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: string
+    delete:
+      summary: Revoke break glass access for a specified Google Cloud user and project
+      description: Revoke break glass access for a specified Google Cloud user and project
+      parameters:
+        - name: project
+          in: query
+          description: The Google Cloud project that emergency access should be revoked for
+          required: true
+          schema:
+            type: string
+        - name: user
+          in: query
+          description: The user to have access revoked, in the format either user:username@example.com for users or serviceAccount:svcname@project.iam.gserviceaccount.com for service accounts
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: string

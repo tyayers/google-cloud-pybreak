@@ -1,0 +1,6 @@
+web.py
+requests
+google-api-python-client
+google-auth
+google-cloud-logging
+google-cloud-tasks
