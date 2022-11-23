@@ -8,6 +8,14 @@ info:
   version: 1.0.0
 servers:
   - url: CLOUD_RUN_PATH
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+  - bearerAuth: [] 
 paths:
   /breakglass:
     post:
