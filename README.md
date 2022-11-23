@@ -18,7 +18,7 @@ To deploy manually, just make sure you are authorized in gcloud and then follow 
 
 ## Using and integrating
 
-After deployment, the service can be called by any system that needs to request elevated access for a user and project (see the API docs in [./docs/breakglass-oapi-v1.yaml](./docs/breakglass-oapi-v1.yaml). The authentication is by default OIDC authentication provided by Cloud RUn using the created **breakglassservice** service account. This can be adapted or changed depending on hosting and needed authentication (auth needs to be done outside of the microservice).
+After deployment, the service can be called by any system that needs to request elevated access for a user and project (see the API docs in [./docs/breakglass-oapi-v1.yaml](./docs/breakglass-oapi-v1.yaml). The authentication is by default [OIDC authentication provided by Cloud Run](https://cloud.google.com/run/docs/authenticating/service-to-service) using the created **breakglassservice** service account. This can be adapted or changed depending on hosting and needed authentication (auth needs to be done outside of the microservice).
 
 ## Architecture
 
