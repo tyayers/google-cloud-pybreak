@@ -29,11 +29,11 @@ export GCLOUD_PROJECT=<Your Google Cloud project>
 
 python3 server.py
 ```
-# API
+## API
 
 The REST API of the service is documented in this [OpenAPI v3 spec](/breakglass-oapi-v1.yaml).
 
-# Configuration
+## Configuration
 
 These environment variables are used to configure the service.
 
