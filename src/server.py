@@ -24,6 +24,7 @@ if not elevatedRole:
     elevatedRole = "roles/owner"
 
 location = os.environ.get("LOCATION")
+local_project = os.environ.get("GCLOUD_PROJECT")
 
 class breakglass:
   """Class for managing the elevated rights for users."""
@@ -46,8 +47,9 @@ class breakglass:
 
     project = web.input().project
     user=web.input().user
+    justification=web.input().justification
 
-    logger.log_text("Starting request to BREAK GLASS and elevate {user} for project {project}".format(user=user, project=project))
+    logger.log_text("STARTING request to BREAK GLASS and elevate {user} for project {project} with justification {justification}".format(user=user, project=project, justification=justification))
 
     service = googleapiclient.discovery.build(
         "cloudresourcemanager", "v1"
@@ -58,7 +60,7 @@ class breakglass:
 
     schedule_remove_elevation(project, location, user)
 
-    logger.log_text("Successfully completed request to BREAK GLASS and elevate {user} for project {project}".format(user=user, project=project))
+    logger.log_text("COMPLETED request to BREAK GLASS and elevate {user} for project {project} with justification {justification}".format(user=user, project=project, justification=justification))
 
     web.header('Content-Type', 'application/json')
     return json.dumps({"result": "OK"})
@@ -88,8 +90,8 @@ def schedule_remove_elevation(project_id, location_id, user):
     """Creates the Cloud Scheduler job to remove elevation"""
 
     # Construct the fully qualified queue name.
-    parent = tasks_client.queue_path(project_id, location_id, "breakglass-reset-queue")
-    remove_previous_user_tasks(project_id, location_id, user)
+    parent = tasks_client.queue_path(local_project, location_id, "breakglass-reset-queue")
+    remove_previous_user_tasks(local_project, location_id, user)
 
     # Construct the request body.
     task = {

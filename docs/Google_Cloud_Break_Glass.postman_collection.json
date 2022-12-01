@@ -1,0 +1,737 @@
+{
+	"info": {
+		"_postman_id": "44045e4c-bf5d-4907-ab3a-ad87502acb4b",
+		"name": "Google Cloud Break Glass",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "1211793"
+	},
+	"item": [
+		{
+			"name": "Get Policies",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/breakglass?project=cloud32x",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"breakglass"
+					],
+					"query": [
+						{
+							"key": "project",
+							"value": "cloud32x"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Policies CR",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"/* This script auto-generates a Google OAuth token from a Service Account key,",
+							" * and stores that token in accessToken variable in Postman.",
+							" *",
+							" * Prior to invoking it, please paste the contents of the key JSON",
+							" * into serviceAccountKey variable in a Postman environment.",
+							" *",
+							" * Then, paste the script into the \"Pre-request Script\" section",
+							" * of a Postman request or collection.",
+							" *",
+							" * The script will cache and reuse the token until it's within",
+							" * a margin of expiration defined in EXPIRES_MARGIN.",
+							" *",
+							" * Thanks to:",
+							" * https://paw.cloud/docs/examples/google-service-apis",
+							" * https://developers.google.com/identity/protocols/OAuth2ServiceAccount#authorizingrequests",
+							" * https://gist.github.com/madebysid/b57985b0649d3407a7aa9de1bd327990",
+							" * https://github.com/postmanlabs/postman-app-support/issues/1607#issuecomment-401611119",
+							" */",
+							"",
+							"const ENV_SERVICE_ACCOUNT_KEY = 'serviceAccountKey';",
+							"const ENV_JS_RSA_SIGN = 'jsrsasign';",
+							"const ENV_TOKEN_EXPIRES_AT = 'tokenExpiresAt';",
+							"const ENV_ACCESS_TOKEN = 'accessToken';",
+							"",
+							"const JS_RSA_SIGN_SRC = 'https://kjur.github.io/jsrsasign/jsrsasign-latest-all-min.js';",
+							"const GOOGLE_OAUTH = 'https://www.googleapis.com/oauth2/v4/token';",
+							"",
+							"// Set the appropriate target_audience here (for IAP it's the client id, for Cloud Run it's the URL of the service)",
+							"const TARGET_AUDIENCE = 'https://breakglassservice-ghfontasua-ew.a.run.app';",
+							"",
+							"// add/remove your own scopes as needed",
+							"const SCOPES = [",
+							"    'https://www.googleapis.com/auth/cloud-platform',",
+							"];",
+							"",
+							"const EXPIRES_MARGIN = 300; // seconds before expiration",
+							"",
+							"const getEnv = name =>",
+							"    pm.environment.get(name);",
+							"",
+							"const setEnv = (name, value) =>",
+							"    pm.environment.set(name, value);",
+							"",
+							"const getJWS = callback => {",
+							"    // workaround for compatibility with jsrsasign",
+							"    const navigator = {};",
+							"    const window = {};",
+							"",
+							"    let jsrsasign = getEnv(ENV_JS_RSA_SIGN);",
+							"    if (jsrsasign) {",
+							"        eval(jsrsasign);",
+							"        return callback(null, KJUR.jws.JWS);",
+							"    }",
+							"",
+							"    pm.sendRequest(JS_RSA_SIGN_SRC, (err, res) => {",
+							"        if (err) return callback(err);",
+							"",
+							"        jsrsasign = res.text();",
+							"        setEnv(ENV_JS_RSA_SIGN, jsrsasign);",
+							"        eval(jsrsasign);",
+							"        callback(null, KJUR.jws.JWS);",
+							"    });",
+							"};",
+							"",
+							"const getJwt = ({ client_email, private_key }, iat, callback) => {",
+							"    getJWS((err, JWS) => {",
+							"        if (err) return callback(err);",
+							"",
+							"        const header = {",
+							"            typ: 'JWT',",
+							"            alg: 'RS256',",
+							"        };",
+							"",
+							"        const exp = iat + 3600;",
+							"        const payload = {",
+							"            aud: GOOGLE_OAUTH,",
+							"            iss: client_email,",
+							"            sub: client_email,",
+							"            target_audience: TARGET_AUDIENCE,",
+							"            iat,",
+							"            exp,",
+							"        };",
+							"",
+							"        const jwt = JWS.sign(null, header, payload, private_key);",
+							"        callback(null, jwt, exp);",
+							"    });",
+							"};",
+							"",
+							"const getToken = (serviceAccountKey, callback) => {",
+							"    const now = Math.floor(Date.now() / 1000);",
+							"    if (now + EXPIRES_MARGIN < getEnv(ENV_TOKEN_EXPIRES_AT)) {",
+							"        return callback();",
+							"    }",
+							"",
+							"    getJwt(serviceAccountKey, now, (err, jwt, exp) => {",
+							"        if (err) return callback(err);",
+							"",
+							"        const req = {",
+							"            url: GOOGLE_OAUTH,",
+							"            method: 'POST',",
+							"            header: {",
+							"                'Content-Type': 'application/x-www-form-urlencoded',",
+							"            },",
+							"            body: {",
+							"              mode: 'urlencoded',",
+							"              urlencoded: [{",
+							"                  key: 'grant_type',",
+							"                  value: 'urn:ietf:params:oauth:grant-type:jwt-bearer',",
+							"              },{",
+							"                  key: 'assertion',",
+							"                  value: jwt,",
+							"              }],",
+							"            },",
+							"        };",
+							"",
+							"        pm.sendRequest(req, (err, res) => {",
+							"            if (err) return callback(err);",
+							"",
+							"            const accessToken = res.json().id_token;",
+							"            setEnv(ENV_ACCESS_TOKEN, accessToken);",
+							"            setEnv(ENV_TOKEN_EXPIRES_AT, exp);",
+							"            callback();",
+							"        });",
+							"    });",
+							"};",
+							"",
+							"const getServiceAccountKey = callback => {",
+							"    try {",
+							"        const keyMaterial = getEnv(ENV_SERVICE_ACCOUNT_KEY);",
+							"        const serviceAccountKey = JSON.parse(keyMaterial);",
+							"        callback(null, serviceAccountKey);",
+							"    } catch (err) {",
+							"        callback(err);",
+							"    }",
+							"};",
+							"",
+							"getServiceAccountKey((err, serviceAccountKey) => {",
+							"    if (err) throw err;",
+							"",
+							"    getToken(serviceAccountKey, err => {",
+							"        if (err) throw err;",
+							"    });",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{accessToken}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://breakglassservice-ghfontasua-ew.a.run.app/breakglass?project=cloud32x",
+					"protocol": "https",
+					"host": [
+						"breakglassservice-ghfontasua-ew",
+						"a",
+						"run",
+						"app"
+					],
+					"path": [
+						"breakglass"
+					],
+					"query": [
+						{
+							"key": "project",
+							"value": "cloud32x"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Elevate User",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/breakglass?project=cloud32x&user=user:testuser1@tyayers.altostrat.com&justification=ticket_1234",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"breakglass"
+					],
+					"query": [
+						{
+							"key": "project",
+							"value": "cloud32x"
+						},
+						{
+							"key": "user",
+							"value": "user:testuser1@tyayers.altostrat.com"
+						},
+						{
+							"key": "justification",
+							"value": "ticket_1234"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Elevate User CR",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"/* This script auto-generates a Google OAuth token from a Service Account key,",
+							" * and stores that token in accessToken variable in Postman.",
+							" *",
+							" * Prior to invoking it, please paste the contents of the key JSON",
+							" * into serviceAccountKey variable in a Postman environment.",
+							" *",
+							" * Then, paste the script into the \"Pre-request Script\" section",
+							" * of a Postman request or collection.",
+							" *",
+							" * The script will cache and reuse the token until it's within",
+							" * a margin of expiration defined in EXPIRES_MARGIN.",
+							" *",
+							" * Thanks to:",
+							" * https://paw.cloud/docs/examples/google-service-apis",
+							" * https://developers.google.com/identity/protocols/OAuth2ServiceAccount#authorizingrequests",
+							" * https://gist.github.com/madebysid/b57985b0649d3407a7aa9de1bd327990",
+							" * https://github.com/postmanlabs/postman-app-support/issues/1607#issuecomment-401611119",
+							" */",
+							"",
+							"const ENV_SERVICE_ACCOUNT_KEY = 'serviceAccountKey';",
+							"const ENV_JS_RSA_SIGN = 'jsrsasign';",
+							"const ENV_TOKEN_EXPIRES_AT = 'tokenExpiresAt';",
+							"const ENV_ACCESS_TOKEN = 'accessToken';",
+							"",
+							"const JS_RSA_SIGN_SRC = 'https://kjur.github.io/jsrsasign/jsrsasign-latest-all-min.js';",
+							"const GOOGLE_OAUTH = 'https://www.googleapis.com/oauth2/v4/token';",
+							"",
+							"// Set the appropriate target_audience here (for IAP it's the client id, for Cloud Run it's the URL of the service)",
+							"const TARGET_AUDIENCE = 'https://breakglassservice-ghfontasua-ew.a.run.app';",
+							"",
+							"// add/remove your own scopes as needed",
+							"const SCOPES = [",
+							"    'https://www.googleapis.com/auth/cloud-platform',",
+							"];",
+							"",
+							"const EXPIRES_MARGIN = 300; // seconds before expiration",
+							"",
+							"const getEnv = name =>",
+							"    pm.environment.get(name);",
+							"",
+							"const setEnv = (name, value) =>",
+							"    pm.environment.set(name, value);",
+							"",
+							"const getJWS = callback => {",
+							"    // workaround for compatibility with jsrsasign",
+							"    const navigator = {};",
+							"    const window = {};",
+							"",
+							"    let jsrsasign = getEnv(ENV_JS_RSA_SIGN);",
+							"    if (jsrsasign) {",
+							"        eval(jsrsasign);",
+							"        return callback(null, KJUR.jws.JWS);",
+							"    }",
+							"",
+							"    pm.sendRequest(JS_RSA_SIGN_SRC, (err, res) => {",
+							"        if (err) return callback(err);",
+							"",
+							"        jsrsasign = res.text();",
+							"        setEnv(ENV_JS_RSA_SIGN, jsrsasign);",
+							"        eval(jsrsasign);",
+							"        callback(null, KJUR.jws.JWS);",
+							"    });",
+							"};",
+							"",
+							"const getJwt = ({ client_email, private_key }, iat, callback) => {",
+							"    getJWS((err, JWS) => {",
+							"        if (err) return callback(err);",
+							"",
+							"        const header = {",
+							"            typ: 'JWT',",
+							"            alg: 'RS256',",
+							"        };",
+							"",
+							"        const exp = iat + 3600;",
+							"        const payload = {",
+							"            aud: GOOGLE_OAUTH,",
+							"            iss: client_email,",
+							"            sub: client_email,",
+							"            target_audience: TARGET_AUDIENCE,",
+							"            iat,",
+							"            exp,",
+							"        };",
+							"",
+							"        const jwt = JWS.sign(null, header, payload, private_key);",
+							"        callback(null, jwt, exp);",
+							"    });",
+							"};",
+							"",
+							"const getToken = (serviceAccountKey, callback) => {",
+							"    const now = Math.floor(Date.now() / 1000);",
+							"    if (now + EXPIRES_MARGIN < getEnv(ENV_TOKEN_EXPIRES_AT)) {",
+							"        return callback();",
+							"    }",
+							"",
+							"    getJwt(serviceAccountKey, now, (err, jwt, exp) => {",
+							"        if (err) return callback(err);",
+							"",
+							"        const req = {",
+							"            url: GOOGLE_OAUTH,",
+							"            method: 'POST',",
+							"            header: {",
+							"                'Content-Type': 'application/x-www-form-urlencoded',",
+							"            },",
+							"            body: {",
+							"              mode: 'urlencoded',",
+							"              urlencoded: [{",
+							"                  key: 'grant_type',",
+							"                  value: 'urn:ietf:params:oauth:grant-type:jwt-bearer',",
+							"              },{",
+							"                  key: 'assertion',",
+							"                  value: jwt,",
+							"              }],",
+							"            },",
+							"        };",
+							"",
+							"        pm.sendRequest(req, (err, res) => {",
+							"            if (err) return callback(err);",
+							"",
+							"            const accessToken = res.json().id_token;",
+							"            setEnv(ENV_ACCESS_TOKEN, accessToken);",
+							"            setEnv(ENV_TOKEN_EXPIRES_AT, exp);",
+							"            callback();",
+							"        });",
+							"    });",
+							"};",
+							"",
+							"const getServiceAccountKey = callback => {",
+							"    try {",
+							"        const keyMaterial = getEnv(ENV_SERVICE_ACCOUNT_KEY);",
+							"        const serviceAccountKey = JSON.parse(keyMaterial);",
+							"        callback(null, serviceAccountKey);",
+							"    } catch (err) {",
+							"        callback(err);",
+							"    }",
+							"};",
+							"",
+							"getServiceAccountKey((err, serviceAccountKey) => {",
+							"    if (err) throw err;",
+							"",
+							"    getToken(serviceAccountKey, err => {",
+							"        if (err) throw err;",
+							"    });",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{accessToken}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "https://breakglassservice-ghfontasua-ew.a.run.app/breakglass?project=cloud31x&user=user:testuser1@tyayers.altostrat.com&justification=ticket_1234",
+					"protocol": "https",
+					"host": [
+						"breakglassservice-ghfontasua-ew",
+						"a",
+						"run",
+						"app"
+					],
+					"path": [
+						"breakglass"
+					],
+					"query": [
+						{
+							"key": "project",
+							"value": "cloud31x"
+						},
+						{
+							"key": "user",
+							"value": "user:testuser1@tyayers.altostrat.com"
+						},
+						{
+							"key": "justification",
+							"value": "ticket_1234"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Elevate User",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/breakglass?project=cloud32x&user=user:testuser1@tyayers.altostrat.com",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"breakglass"
+					],
+					"query": [
+						{
+							"key": "project",
+							"value": "cloud32x"
+						},
+						{
+							"key": "user",
+							"value": "user:testuser1@tyayers.altostrat.com"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Elevate User CR",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"/* This script auto-generates a Google OAuth token from a Service Account key,",
+							" * and stores that token in accessToken variable in Postman.",
+							" *",
+							" * Prior to invoking it, please paste the contents of the key JSON",
+							" * into serviceAccountKey variable in a Postman environment.",
+							" *",
+							" * Then, paste the script into the \"Pre-request Script\" section",
+							" * of a Postman request or collection.",
+							" *",
+							" * The script will cache and reuse the token until it's within",
+							" * a margin of expiration defined in EXPIRES_MARGIN.",
+							" *",
+							" * Thanks to:",
+							" * https://paw.cloud/docs/examples/google-service-apis",
+							" * https://developers.google.com/identity/protocols/OAuth2ServiceAccount#authorizingrequests",
+							" * https://gist.github.com/madebysid/b57985b0649d3407a7aa9de1bd327990",
+							" * https://github.com/postmanlabs/postman-app-support/issues/1607#issuecomment-401611119",
+							" */",
+							"",
+							"const ENV_SERVICE_ACCOUNT_KEY = 'serviceAccountKey';",
+							"const ENV_JS_RSA_SIGN = 'jsrsasign';",
+							"const ENV_TOKEN_EXPIRES_AT = 'tokenExpiresAt';",
+							"const ENV_ACCESS_TOKEN = 'accessToken';",
+							"",
+							"const JS_RSA_SIGN_SRC = 'https://kjur.github.io/jsrsasign/jsrsasign-latest-all-min.js';",
+							"const GOOGLE_OAUTH = 'https://www.googleapis.com/oauth2/v4/token';",
+							"",
+							"// Set the appropriate target_audience here (for IAP it's the client id, for Cloud Run it's the URL of the service)",
+							"const TARGET_AUDIENCE = 'https://breakglassservice-ghfontasua-ew.a.run.app';",
+							"",
+							"// add/remove your own scopes as needed",
+							"const SCOPES = [",
+							"    'https://www.googleapis.com/auth/cloud-platform',",
+							"];",
+							"",
+							"const EXPIRES_MARGIN = 300; // seconds before expiration",
+							"",
+							"const getEnv = name =>",
+							"    pm.environment.get(name);",
+							"",
+							"const setEnv = (name, value) =>",
+							"    pm.environment.set(name, value);",
+							"",
+							"const getJWS = callback => {",
+							"    // workaround for compatibility with jsrsasign",
+							"    const navigator = {};",
+							"    const window = {};",
+							"",
+							"    let jsrsasign = getEnv(ENV_JS_RSA_SIGN);",
+							"    if (jsrsasign) {",
+							"        eval(jsrsasign);",
+							"        return callback(null, KJUR.jws.JWS);",
+							"    }",
+							"",
+							"    pm.sendRequest(JS_RSA_SIGN_SRC, (err, res) => {",
+							"        if (err) return callback(err);",
+							"",
+							"        jsrsasign = res.text();",
+							"        setEnv(ENV_JS_RSA_SIGN, jsrsasign);",
+							"        eval(jsrsasign);",
+							"        callback(null, KJUR.jws.JWS);",
+							"    });",
+							"};",
+							"",
+							"const getJwt = ({ client_email, private_key }, iat, callback) => {",
+							"    getJWS((err, JWS) => {",
+							"        if (err) return callback(err);",
+							"",
+							"        const header = {",
+							"            typ: 'JWT',",
+							"            alg: 'RS256',",
+							"        };",
+							"",
+							"        const exp = iat + 3600;",
+							"        const payload = {",
+							"            aud: GOOGLE_OAUTH,",
+							"            iss: client_email,",
+							"            sub: client_email,",
+							"            target_audience: TARGET_AUDIENCE,",
+							"            iat,",
+							"            exp,",
+							"        };",
+							"",
+							"        const jwt = JWS.sign(null, header, payload, private_key);",
+							"        callback(null, jwt, exp);",
+							"    });",
+							"};",
+							"",
+							"const getToken = (serviceAccountKey, callback) => {",
+							"    const now = Math.floor(Date.now() / 1000);",
+							"    if (now + EXPIRES_MARGIN < getEnv(ENV_TOKEN_EXPIRES_AT)) {",
+							"        return callback();",
+							"    }",
+							"",
+							"    getJwt(serviceAccountKey, now, (err, jwt, exp) => {",
+							"        if (err) return callback(err);",
+							"",
+							"        const req = {",
+							"            url: GOOGLE_OAUTH,",
+							"            method: 'POST',",
+							"            header: {",
+							"                'Content-Type': 'application/x-www-form-urlencoded',",
+							"            },",
+							"            body: {",
+							"              mode: 'urlencoded',",
+							"              urlencoded: [{",
+							"                  key: 'grant_type',",
+							"                  value: 'urn:ietf:params:oauth:grant-type:jwt-bearer',",
+							"              },{",
+							"                  key: 'assertion',",
+							"                  value: jwt,",
+							"              }],",
+							"            },",
+							"        };",
+							"",
+							"        pm.sendRequest(req, (err, res) => {",
+							"            if (err) return callback(err);",
+							"",
+							"            const accessToken = res.json().id_token;",
+							"            setEnv(ENV_ACCESS_TOKEN, accessToken);",
+							"            setEnv(ENV_TOKEN_EXPIRES_AT, exp);",
+							"            callback();",
+							"        });",
+							"    });",
+							"};",
+							"",
+							"const getServiceAccountKey = callback => {",
+							"    try {",
+							"        const keyMaterial = getEnv(ENV_SERVICE_ACCOUNT_KEY);",
+							"        const serviceAccountKey = JSON.parse(keyMaterial);",
+							"        callback(null, serviceAccountKey);",
+							"    } catch (err) {",
+							"        callback(err);",
+							"    }",
+							"};",
+							"",
+							"getServiceAccountKey((err, serviceAccountKey) => {",
+							"    if (err) throw err;",
+							"",
+							"    getToken(serviceAccountKey, err => {",
+							"        if (err) throw err;",
+							"    });",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{accessToken}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "https://breakglassservice-ghfontasua-ew.a.run.app/breakglass?project=cloud31x&user=user:testuser1@tyayers.altostrat.com",
+					"protocol": "https",
+					"host": [
+						"breakglassservice-ghfontasua-ew",
+						"a",
+						"run",
+						"app"
+					],
+					"path": [
+						"breakglass"
+					],
+					"query": [
+						{
+							"key": "project",
+							"value": "cloud31x"
+						},
+						{
+							"key": "user",
+							"value": "user:testuser1@tyayers.altostrat.com"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Elevate ServiceAccount",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/breakglass?project=cloud32x&user=serviceAccount:trendservice@cloud32x.iam.gserviceaccount.com",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"breakglass"
+					],
+					"query": [
+						{
+							"key": "project",
+							"value": "cloud32x"
+						},
+						{
+							"key": "user",
+							"value": "serviceAccount:trendservice@cloud32x.iam.gserviceaccount.com"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Elevate ServiceAccount",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/breakglass?project=cloud32x&user=serviceAccount:trendservice@cloud32x.iam.gserviceaccount.com",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"breakglass"
+					],
+					"query": [
+						{
+							"key": "project",
+							"value": "cloud32x"
+						},
+						{
+							"key": "user",
+							"value": "serviceAccount:trendservice@cloud32x.iam.gserviceaccount.com"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

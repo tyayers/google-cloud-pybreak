@@ -8,6 +8,6 @@ gcloud run deploy breakglassservice --image eu.gcr.io/$PROJECT/breakglassservice
     --platform managed --project $PROJECT \
     --region $LOCATION --no-allow-unauthenticated \
     --service-account="breakglassservice@$PROJECT.iam.gserviceaccount.com" \
-    --set-env-vars SERVICE_ACCOUNT="breakglassservice@$PROJECT.iam.gserviceaccount.com",LOCATION="$LOCATION"
+    --set-env-vars SERVICE_ACCOUNT="breakglassservice@$PROJECT.iam.gserviceaccount.com",LOCATION="$LOCATION",GCLOUD_PROJECT="$PROJECT"
 
     
