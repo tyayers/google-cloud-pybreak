@@ -1,6 +1,6 @@
-# Google Cloud Break Glass Service (Pybreak)
+# Google Cloud Break Glass Microservice Solution
 
-This is small solution to external systems to grant emergency elevated rights (break glass) to Google Cloud projects through a microservice API (written in Python, hence the name Pybreak). The rights are also automatically revoked after 10 hours, and the elevation logged for operations and auditing purposes.
+This is microservice solution to easily enable external systems to grant emergency elevated rights access ("break glass") to Google Cloud projects through a simple API called from a ticketing or automation system. The microservice is deployed by default to [Google Cloud Run](https://cloud.google.com/run), and secured by default through Google Cloud authentication with a service account. The rights are also automatically revoked after 10 hours through a [Google Cloud Task](https://cloud.google.com/tasks), and the elevation logged to [Google Cloud Logging](https://cloud.google.com/logging) for monitoring and auditing purposes.
 
 ## QuickStart- Cloud Shell setup tutorial
 
@@ -29,6 +29,7 @@ export GCLOUD_PROJECT=<Your Google Cloud project>
 
 python3 server.py
 ```
+
 ## API
 
 The REST API of the service is documented in this [OpenAPI v3 spec](/breakglass-oapi-v1.yaml).
@@ -73,7 +74,6 @@ const TARGET_AUDIENCE = 'https://breakglassservice-ghfontasua-ew.a.run.app';
 Then also set a **Postman Environment Variable** called **serviceAccountKey** to a Google Cloud service account JSON key for a service account with the permissions needed (see **2_create_resources.sh** for needed roles).
 
 This Pre-release script retrieves an ID token with your URL as audience, and sends it as Bearer token to Cloud Run, which is needed to authenticate the request.
-
 
 ## Support
 
